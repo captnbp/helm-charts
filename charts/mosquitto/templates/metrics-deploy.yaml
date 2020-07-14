@@ -30,6 +30,8 @@ spec:
         - name: metrics
           image: "{{ .Values.metrics.image.repository }}:{{ .Values.metrics.image.tag }}"
           imagePullPolicy: {{ .Values.metrics.image.pullPolicy | quote }}
+          securityContext:
+            {{- toYaml .Values.metrics.securityContext | nindent 12 }}
           ports:
             - name: metrics
               containerPort: 9180
