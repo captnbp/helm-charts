@@ -1,0 +1,81 @@
+---
+{{- if .Values.ingress.enabled -}}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ template "unifi-controller.fullname" . }}
+  labels: {{- include "unifi-controller.matchLabels" . | nindent 4 }}
+spec:
+  type: {{ .Values.service.type }}
+  ports:
+    - name: https
+      port: {{ .Values.service.port }}
+      protocol: TCP
+      targetPort: https
+    - name: captive-http
+      targetPort: captive-http
+      port: 8880
+      protocol: TCP
+    - name: captive-https
+      targetPort: captive-https
+      port: 8843
+      protocol: TCP
+  selector: {{- include "unifi-controller.matchLabels" . | nindent 4 }}
+    app.kubernetes.io/component: unifi-controller
+{{- end }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ template "unifi-controller.fullname" . }}-tcp
+  labels: {{- include "unifi-controller.matchLabels" . | nindent 4 }}
+  annotations:
+    metallb.universe.tf/allow-shared-ip: {{ template "unifi-controller.fullname" . }}
+spec:
+  type: LoadBalancer
+  loadBalancerIP: {{ .Values.service.loadBalancerIP }}
+  ports:
+    - name: https
+      port: {{ .Values.service.port }}
+      protocol: TCP
+      targetPort: https
+    - name: captive-http
+      targetPort: captive-http
+      port: 8880
+      protocol: TCP
+    - name: captive-https
+      targetPort: captive-https
+      port: 8843
+      protocol: TCP
+    - name: controller
+      targetPort: controller
+      port: 8080
+      protocol: TCP
+    - name: speedtest
+      targetPort: speedtest
+      port: 6789
+      protocol: TCP
+  selector: {{- include "unifi-controller.matchLabels" . | nindent 4 }}
+    app.kubernetes.io/component: unifi-controller
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ template "unifi-controller.fullname" . }}-udp
+  labels: {{- include "unifi-controller.matchLabels" . | nindent 4 }}
+  annotations:
+    metallb.universe.tf/allow-shared-ip: {{ template "unifi-controller.fullname" . }}
+spec:
+  type: LoadBalancer
+  loadBalancerIP: {{ .Values.service.loadBalancerIP }}
+  ports:
+    - name: stun
+      targetPort: stun
+      port: 3478
+      protocol: UDP
+    - name: discovery
+      targetPort: discovery
+      port: 10001
+      protocol: UDP
+  selector: {{- include "unifi-controller.matchLabels" . | nindent 4 }}
+    app.kubernetes.io/component: unifi-controller

@@ -1,0 +1,70 @@
+---
+{{- if and .Values.metrics.enabled .Values.metrics.serviceMonitor.enabled }}
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: {{ include "unifi-controller.metrics.fullname" . }}
+  {{- if .Values.metrics.serviceMonitor.namespace }}
+  namespace: {{ .Values.metrics.serviceMonitor.namespace }}
+  {{- end }}
+  labels: {{- include "unifi-controller.labels" . | nindent 4 }}
+    app.kubernetes.io/component: metrics
+    release: prometheus-operator
+    {{- range $key, $value := .Values.metrics.serviceMonitor.selector }}
+    {{ $key }}: {{ $value | quote }}
+    {{- end }}
+spec:
+  selector:
+    matchLabels: {{- include "unifi-controller.matchLabels" . | nindent 6 }}
+      app.kubernetes.io/component: metrics
+  endpoints:
+    - port: metrics
+      {{- if .Values.metrics.serviceMonitor.interval }}
+      interval: {{ .Values.metrics.serviceMonitor.interval }}
+      {{- end }}
+      {{- if .Values.metrics.serviceMonitor.scrapeTimeout }}
+      scrapeTimeout: {{ .Values.metrics.serviceMonitor.scrapeTimeout }}
+      {{- end }}
+      path: "/metrics"
+      scheme: http
+  namespaceSelector:
+    matchNames:
+      - {{ .Release.Namespace }}
+{{- end }}
+
+{{- if .Values.blackbox.serviceMonitor.enabled }}
+---
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: {{ template "unifi-controller.fullname" . }}-blackbox-{{ .Values.blackbox.serviceMonitor.target.name }}
+  labels: {{- include "unifi-controller.labels" . | nindent 4 }}
+    app.kubernetes.io/component: unifi-controller
+    {{- if or $.Values.blackbox.serviceMonitor.defaults.labels .labels }}
+    {{- toYaml (.Values.blackbox.serviceMonitor.target.labels | default $.Values.blackbox.serviceMonitor.defaults.labels) | nindent 4 }}
+    {{- end }}
+spec:
+  endpoints:
+  - port: http
+    scheme: http
+    path: "/probe"
+    interval: {{ .Values.blackbox.serviceMonitor.target.interval | default $.Values.blackbox.serviceMonitor.defaults.interval }}
+    scrapeTimeout: {{ .Values.blackbox.serviceMonitor.target.scrapeTimeout | default $.Values.blackbox.serviceMonitor.defaults.scrapeTimeout }}
+    params:
+      module:
+      - {{ .Values.blackbox.serviceMonitor.target.module | default $.Values.blackbox.serviceMonitor.defaults.module }}
+      target:
+      - {{ .Values.blackbox.serviceMonitor.target.url }}
+    metricRelabelings:
+      - sourceLabels: [__address__]
+        targetLabel: __param_target
+      - sourceLabels: [__param_target]
+        targetLabel: instance
+      - targetLabel: target
+        replacement: {{ .Values.blackbox.serviceMonitor.target.name }}
+  jobLabel: "{{ $.Release.Name }}"
+  selector:
+    matchLabels: {{- toYaml ($.Values.blackbox.serviceMonitor.selector.matchLabels) | nindent 6 }}
+  namespaceSelector:
+    matchNames: {{- toYaml ($.Values.blackbox.serviceMonitor.namespaceSelector.matchNames) | nindent 6 }}
+{{- end }}

@@ -1,0 +1,18 @@
+---
+{{- if .Values.metrics.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ template "unifi-controller.fullname" . }}-metrics
+  labels: {{- include "unifi-controller.labels" . | nindent 4 }}
+    app.kubernetes.io/component: metrics
+  annotations: {{ include "unifi-controller.tplValue" ( dict "value" .Values.metrics.service.annotations "context" $) | nindent 4 }}
+spec:
+  type: {{ .Values.metrics.service.type }}
+  ports:
+    - name: metrics
+      port: 9130
+      targetPort: metrics
+  selector: {{- include "unifi-controller.matchLabels" . | nindent 4 }}
+    app.kubernetes.io/component: metrics
+{{- end }}

@@ -1,0 +1,58 @@
+
+replicaCount: 1
+
+image:
+  repository: linuxserver/unifi-controller
+  tag: latest
+  pullPolicy: IfNotPresent
+
+env:
+  - name: PUID
+    value: "1000"
+  - name: PGID
+    value: "1000"
+
+service:
+  type: ClusterIP
+  port: 80
+
+ingress:
+  enabled: false
+  annotations:
+    kubernetes.io/ingress.class: nginx
+  path: /
+  hosts:
+    - unifi-controller.bananaspliff.org
+  tls:
+   - secretName: unifi-controller-bananaspliff-org
+     hosts:
+       - unifi-controller.bananaspliff.org
+
+volumes:
+  - name: myvolume
+    persistentVolumeClaim:
+      claimName: myvolume
+
+volumeMounts:
+  - name: myvolume
+    mountPath: "/config"
+    subPath: "configs/unifi-controller"
+  - name: myvolume
+    mountPath: "/downloads"
+    subPath: "downloads/unifi-controller"
+
+resources:
+  requests:
+    memory: 128Mi
+    cpu: 0.1
+  limits:
+    memory: 256Mi
+    cpu: 0.5
+
+securityContext: {}
+
+nodeSelector: {}
+
+tolerations: []
+
+affinity: {}

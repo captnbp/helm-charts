@@ -1,0 +1,39 @@
+---
+{{- if and .Values.metrics.enabled .Values.metrics.serviceMonitor.enabled }}
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: "{{ template "home-assistant.fullname" . }}"
+  labels: {{- include "home-assistant.labels" . | nindent 4 }}
+  {{- if .Values.metrics.serviceMonitor.namespace }}
+  namespace: {{ .Values.metrics.serviceMonitor.namespace }}
+  {{- end }}
+spec:
+  selector:
+    matchLabels: {{- include "home-assistant.selectorLabels" . | nindent 6 }}
+  endpoints:
+    - port: http
+      honorLabels: true
+      {{- if .Values.metrics.serviceMonitor.interval }}
+      interval: {{ .Values.metrics.serviceMonitor.interval }}
+      {{- end }}
+      {{- if .Values.metrics.serviceMonitor.scrapeTimeout }}
+      scrapeTimeout: {{ .Values.metrics.serviceMonitor.scrapeTimeout }}
+      {{- end }}
+      path: "/api/prometheus"
+      scheme: {{ .Values.metrics.serviceMonitor.scheme }}
+      tlsConfig:
+        insecureSkipVerify: true
+{{- if .Values.metrics.serviceMonitor.bearerTokenFile }}
+      bearerTokenFile: {{ .Values.metrics.serviceMonitor.bearerTokenFile }}
+{{- end }}
+{{- if .Values.metrics.serviceMonitor.bearerTokenSecret }}
+      bearerTokenSecret:
+        name: "{{ template "home-assistant.fullname" . }}-bearer"
+        key: bearer_token
+{{- end }}
+  jobLabel: {{ template "home-assistant.fullname" . }}
+  namespaceSelector:
+    matchNames:
+      - {{ .Release.Namespace }}
+{{- end }}

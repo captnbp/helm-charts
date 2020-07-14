@@ -1,0 +1,76 @@
+---
+{{- if .Values.metrics.enabled }}
+apiVersion: {{ template "deployment.apiVersion" . }}
+kind: Deployment
+metadata:
+  name: {{ include "unifi-controller.metrics.fullname" . }}
+  labels: {{- include "unifi-controller.labels" . | nindent 4 }}
+    app.kubernetes.io/component: metrics
+    ## Istio Labels: https://istio.io/docs/ops/deployment/requirements/
+    app: metrics
+spec:
+  selector:
+    matchLabels: {{- include "unifi-controller.matchLabels" . | nindent 6 }}
+      app.kubernetes.io/component: metrics
+  replicas: 1
+  template:
+    metadata:
+      labels: {{- include "unifi-controller.labels" . | nindent 8 }}
+        app.kubernetes.io/component: metrics
+        ## Istio Labels: https://istio.io/docs/ops/deployment/requirements/
+        app: metrics
+        {{- if .Values.metrics.podLabels }}
+        {{- include "unifi-controller.tplValue" (dict "value" .Values.metrics.podLabels "context" $) | nindent 8 }}
+        {{- end }}
+      {{- with .Values.metrics.podAnnotations }}
+      annotations: {{ toYaml . | nindent 8 }}
+      {{- end }}
+    spec:
+{{- include "unifi-controller.imagePullSecrets" . | indent 6 }}
+      containers:
+        - name: metrics
+          image: {{ include "unifi-controller.metrics.image" . }}
+          imagePullPolicy: {{ .Values.metrics.image.pullPolicy | quote }}
+          command: ["/image"]
+          args: ["-c", "/etc/unifi-poller/up.yaml"]
+          ports:
+            - name: metrics
+              containerPort: 9130
+          env:
+            - name: UP_UNIFI_DEFAULT_PASS
+              valueFrom:
+                secretKeyRef:
+                  name: unifi-controller
+                  key: password
+          livenessProbe:
+            httpGet:
+              path: /
+              port: metrics
+            initialDelaySeconds: 60
+            timeoutSeconds: 5
+          readinessProbe:
+            httpGet:
+              path: /
+              port: metrics
+            initialDelaySeconds: 5
+            timeoutSeconds: 1
+          {{- if .Values.metrics.resources }}
+          resources: {{- toYaml .Values.metrics.resources | nindent 12 }}
+          {{- end }}
+          securityContext:
+            runAsUser: 1000
+            runAsGroup: 1000
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
+          volumeMounts:
+            - name: configuration
+              mountPath: /etc/unifi-poller/up.yaml
+              subPath: up.yaml
+      volumes:
+        - name: configuration
+          configMap:
+            defaultMode: 0444
+            name: {{ template "unifi-controller.fullname" . }}
+{{- end }}

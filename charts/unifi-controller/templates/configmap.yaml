@@ -1,0 +1,35 @@
+---
+{{- if and .Values.metrics.enabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ template "unifi-controller.fullname" . }}
+  labels: {{- include "unifi-controller.matchLabels" . | nindent 4 }}
+data:
+  up.yaml: |-
+    poller:
+      debug: false
+      quiet: false
+      plugins: []
+
+    prometheus:
+      disable: false
+      http_listen: "0.0.0.0:9130"
+      report_errors: false
+
+    influxdb:
+      disable: true
+
+    unifi:
+      dynamic: false
+      defaults:
+        role: "{{ .Values.role }}"
+        user: "{{ .Values.metrics.username }}"
+        url:  "https://{{ template "unifi-controller.fullname" . }}:80"
+        sites:
+          - all
+        verify_ssl: false
+        save_ids:   false
+        save_dpi:   false
+        save_sites: true
+{{- end }}

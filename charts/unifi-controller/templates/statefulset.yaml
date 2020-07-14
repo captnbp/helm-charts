@@ -1,0 +1,89 @@
+---
+apiVersion: {{ template "statefulset.apiVersion" . }}
+kind: StatefulSet
+metadata:
+  name: "{{ template "unifi-controller.fullname" . }}"
+  labels: {{- include "unifi-controller.matchLabels" . | nindent 4 }}
+    app.kubernetes.io/component: unifi-controller
+    ## Istio Labels: https://istio.io/docs/ops/deployment/requirements/
+    app: unifi-controller
+spec:
+  selector:
+    matchLabels: {{- include "unifi-controller.matchLabels" . | nindent 6 }}
+      app.kubernetes.io/component: unifi-controller
+  replicas: 1
+  serviceName: {{ template "unifi-controller.fullname" . }}
+  template:
+    metadata:
+      labels: {{- include "unifi-controller.labels" . | nindent 8 }}
+        app.kubernetes.io/component: unifi-controller
+    spec:
+      serviceAccountName: {{ template "unifi-controller.serviceAccountName" . }}
+      {{- if .Values.securityContext.enabled }}
+      securityContext:
+        fsGroup: {{ .Values.securityContext.fsGroup }}
+      {{- end }}
+      volumes:
+{{ toYaml .Values.volumes | indent 6 }}
+      containers:
+        - name: "{{ .Chart.Name }}"
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: "{{ .Values.image.pullPolicy }}"
+          env:
+{{ toYaml .Values.env | indent 12 }}
+          ports:
+            - name: https
+              containerPort: 8443
+              protocol: TCP
+            - name: controller
+              containerPort: 8080
+              protocol: TCP
+            - name: captive-http
+              containerPort: 8880
+              protocol: TCP
+            - name: captive-https
+              containerPort: 8843
+              protocol: TCP
+            - name: speedtest
+              containerPort: 6789
+              protocol: TCP
+            - name: stun
+              containerPort: 3478
+              protocol: UDP
+            - name: discovery
+              containerPort: 10001
+              protocol: UDP
+          securityContext:
+            capabilities:
+              add:
+                - SETFCAP
+          livenessProbe:
+            httpGet:
+              path: /status
+              port: https
+              scheme: HTTPS
+            initialDelaySeconds: 120
+          readinessProbe:
+            httpGet:
+              path: /status
+              port: https
+              scheme: HTTPS
+            initialDelaySeconds: 15
+          volumeMounts:
+{{ toYaml .Values.volumeMounts | indent 12 }}
+          resources:
+{{ toYaml .Values.resources | indent 12 }}
+          securityContext:
+{{ toYaml .Values.securityContext | indent 12 }}
+    {{- with .Values.nodeSelector }}
+      nodeSelector:
+{{ toYaml . | indent 8 }}
+    {{- end }}
+    {{- with .Values.affinity }}
+      affinity:
+{{ toYaml . | indent 8 }}
+    {{- end }}
+    {{- with .Values.tolerations }}
+      tolerations:
+{{ toYaml . | indent 8 }}
+    {{- end }}
