@@ -1,0 +1,17 @@
+{{- if .Values.metrics.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "mosquitto.fullname" . }}-metrics
+  labels: {{- include "mosquitto.labels" . | nindent 4 }}
+    app.kubernetes.io/component: metrics
+  annotations: {{ include "mosquitto.tplValue" ( dict "value" .Values.metrics.service.annotations "context" $) | nindent 4 }}
+spec:
+  type: {{ .Values.metrics.service.type }}
+  ports:
+    - name: metrics
+      port: 9180
+      targetPort: metrics
+  selector: {{- include "mosquitto.selectorLabels" . | nindent 4 }}
+    app.kubernetes.io/component: metrics
+{{- end }}

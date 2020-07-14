@@ -1,0 +1,64 @@
+{{- if .Values.metrics.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "mosquitto.fullname" . }}-metrics
+  labels: {{- include "mosquitto.labels" . | nindent 4 }}
+    app.kubernetes.io/component: metrics
+    ## Istio Labels: https://istio.io/docs/ops/deployment/requirements/
+    app: metrics
+spec:
+  selector:
+    matchLabels: {{- include "mosquitto.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: metrics
+  replicas: 1
+  template:
+    metadata:
+      labels: {{- include "mosquitto.labels" . | nindent 8 }}
+        app.kubernetes.io/component: metrics
+        ## Istio Labels: https://istio.io/docs/ops/deployment/requirements/
+        app: metrics
+        {{- if .Values.metrics.podLabels }}
+        {{- include "mosquitto.tplValue" (dict "value" .Values.metrics.podLabels "context" $) | nindent 8 }}
+        {{- end }}
+      {{- with .Values.metrics.podAnnotations }}
+      annotations: {{ toYaml . | nindent 8 }}
+      {{- end }}
+    spec:
+{{- include "mosquitto.imagePullSecrets" . | indent 6 }}
+      containers:
+        - name: metrics
+          image: "{{ .Values.metrics.image.repository }}:{{ .Values.metrics.image.tag }}"
+          imagePullPolicy: {{ .Values.metrics.image.pullPolicy | quote }}
+          ports:
+            - name: metrics
+              containerPort: 9180
+          env:
+            - name: MOSQUITTO_USER
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "mosquitto.fullname" . }}-metrics
+                  key: username
+            - name: MOSQUITTO_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "mosquitto.fullname" . }}-metrics
+                  key: password
+            - name: MOSQUITTO_HOSTNAME
+              value: {{ include "mosquitto.fullname" . }}
+          livenessProbe:
+            httpGet:
+              path: /prometheus-metrics
+              port: metrics
+            initialDelaySeconds: 60
+            timeoutSeconds: 5
+          readinessProbe:
+            httpGet:
+              path: /prometheus-metrics
+              port: metrics
+            initialDelaySeconds: 5
+            timeoutSeconds: 1
+          {{- if .Values.metrics.resources }}
+          resources: {{- toYaml .Values.metrics.resources | nindent 12 }}
+          {{- end }}
+{{- end }}
