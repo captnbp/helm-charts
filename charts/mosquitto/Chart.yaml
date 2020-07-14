@@ -21,3 +21,15 @@ version: 0.1.0
 # incremented each time you make changes to the application. Versions are not expected to
 # follow Semantic Versioning. They should reflect the version the application is using.
 appVersion: 1.6.10
+
+
+keywords:
+- mosquitto
+- mqtt
+
+sources:
+- https://github.com/Alessandrovito/mosquitto-exporter-prom-grafana
+
+maintainers:
+- name: captnbp
+  email: benoit.pourre@gmail.com
